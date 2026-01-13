@@ -46,7 +46,7 @@
     font-weight: bold;
   }
 
-  input, textarea {
+  input, textarea, button {
     width: 100%;
     background: #000;
     color: #eee;
@@ -62,13 +62,7 @@
   }
 
   button {
-    background: #000;
-    color: #eee;
-    border: 1px solid #555;
-    padding: 8px;
     cursor: pointer;
-    font-family: monospace;
-    font-size: 14px;
   }
 
   button:hover {
@@ -87,14 +81,25 @@
   <div id="log">Загрузка...</div>
 
   <div class="input-block">
-    <input id="nick" placeholder="nick">
-    <textarea id="message" rows="3" placeholder="message"></textarea>
+    <input id="nick" placeholder="nick" maxlength="32">
+    <textarea id="message" rows="3" placeholder="message" maxlength="2000"></textarea>
     <button onclick="send()">send</button>
   </div>
 </div>
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbzQCrrnyAbszf4T2Si6SJehADQnfvIvL01n3Fm4ckBpnjF0LMJgYTo8mHUWHVJKYAGU/exec';
+
+/* ===== ЭКРАНИРОВАНИЕ ===== */
+function escapeHTML(str) {
+  return str.replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[c]);
+}
 
 
 function nickColor(nick) {
@@ -105,7 +110,7 @@ function nickColor(nick) {
   return `hsl(${hash % 360}, 70%, 60%)`;
 }
 
-
+/* ===== РЕНДЕР ===== */
 function render(text) {
   const lines = text.split('\n');
   let html = '';
@@ -115,8 +120,8 @@ function render(text) {
     const match = line.match(/^\[(\d\d:\d\d:\d\d)\]\s(.+?):$/);
 
     if (match) {
-      const time = match[1];
-      const nick = match[2];
+      const time = escapeHTML(match[1]);
+      const nick = escapeHTML(match[2]);
       const today = new Date().toLocaleDateString();
 
       if (currentDay !== today) {
@@ -127,7 +132,7 @@ function render(text) {
       html += `<span class="time">[${time}]</span> ` +
               `<span class="nick" style="color:${nickColor(nick)}">${nick}</span>:\n`;
     } else {
-      html += line + '\n';
+      html += escapeHTML(line) + '\n';
     }
   });
 
@@ -137,12 +142,14 @@ function render(text) {
 
 
 function send() {
-  const nick = nickEl.value.trim();
-  const message = msgEl.value.trim();
+  const nick = nickEl.value.trim().slice(0, 32);
+  const message = msgEl.value.trim().slice(0, 2000);
+
   if (!nick || !message) return;
 
   fetch(API_URL, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ nick, message })
   });
 
@@ -153,17 +160,8 @@ function send() {
 function loadChat() {
   fetch(API_URL)
     .then(r => r.text())
-    .then(render);
+    .then(render)
+    .catch(() => {});
 }
 
-const logEl = document.getElementById('log');
-const nickEl = document.getElementById('nick');
-const msgEl  = document.getElementById('message');
-
-setInterval(loadChat, 3000);
-loadChat();
-</script>
-
-</body>
-</html>
-
+const logEl = doc

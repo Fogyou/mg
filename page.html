@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Black chat</title>
+<style>
+body {
+  background:#000;
+  color:#eee;
+  font-family:monospace;
+  padding:20px;
+}
+#log {
+  border:1px solid #333;
+  height:60vh;
+  overflow:auto;
+  padding:10px;
+  white-space:pre-wrap;
+}
+textarea, button {
+  width:100%;
+  background:#000;
+  color:#eee;
+  border:1px solid #333;
+  margin-top:10px;
+  padding:6px;
+}
+</style>
+</head>
+<body>
+
+<h2>Console Chat</h2>
+
+<div id="log">loading...</div>
+<textarea id="msg" rows="3" placeholder="Сообщение..."></textarea>
+<button onclick="send()">send</button>
+
+<script>
+function load() {
+  google.script.run
+    .withSuccessHandler(t => {
+      log.textContent = t;
+      log.scrollTop = log.scrollHeight;
+    })
+    .loadChat();
+}
+
+function send() {
+  const text = msg.value.trim();
+  if (!text) return;
+
+  google.script.run.sendMessage(text);
+  msg.value='';
+}
+
+setInterval(load, 3000);
+load();
+</script>
+
+</body>
+</html>

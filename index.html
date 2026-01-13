@@ -3,147 +3,93 @@
 <head>
 <meta charset="UTF-8">
 <title>Console Chat</title>
-
 <style>
-  body {
-    background: #000;
-    color: #eee;
-    font-family: monospace;
-    margin: 0;
-    padding: 20px;
-  }
-
-  #terminal {
-    max-width: 900px;
-    margin: auto;
-  }
-
-  #log {
-    border: 1px solid #333;
-    padding: 15px;
-    height: 60vh;
-    overflow-y: auto;
-    background: #000;
-    white-space: pre-wrap;
-  }
-
-  .day {
-    color: #6cf;
-    margin: 10px 0;
-    text-align: center;
-  }
-
-  .time {
-    color: #888;
-  }
-
-  .nick {
-    font-weight: bold;
-  }
-
-  input, textarea {
-    width: 100%;
-    margin-top: 10px;
-    background: #000;
-    color: #eee;
-    border: 1px solid #333;
-    padding: 8px;
-    font-family: monospace;
-  }
-
-  button {
-    margin-top: 10px;
-    background: #000;
-    color: #eee;
-    border: 1px solid #555;
-    padding: 8px;
-    cursor: pointer;
-  }
-
-  button:hover {
-    background: #111;
-  }
+body {
+  background:#000;
+  color:#eee;
+  font-family:monospace;
+  padding:20px;
+}
+#log {
+  border:1px solid #333;
+  height:60vh;
+  overflow:auto;
+  padding:10px;
+  white-space:pre-wrap;
+}
+input, textarea, button {
+  width:100%;
+  background:#000;
+  color:#eee;
+  border:1px solid #333;
+  margin-top:10px;
+  padding:6px;
+}
 </style>
 </head>
 <body>
 
-<div id="terminal">
-  <div id="log">Загрузка...</div>
+<div id="log">Loading...</div>
 
-  <input id="nick" placeholder="nick">
-  <textarea id="message" rows="3" placeholder="message"></textarea>
-  <button onclick="send()">send</button>
+<div id="nickBox" style="display:none">
+  <input id="nickInput" placeholder="Choose your nick">
+  <button onclick="saveNick()">Save nick</button>
+</div>
+
+<div id="chatBox" style="display:none">
+  <textarea id="msg" rows="3"></textarea>
+  <button onclick="send()">Send</button>
 </div>
 
 <script>
-const API_URL = 'https://script.google.com/macros/s/AKfycbzQCrrnyAbszf4T2Si6SJehADQnfvIvL01n3Fm4ckBpnjF0LMJgYTo8mHUWHVJKYAGU/exec';
+const API = 'https://script.google.com/macros/library/d/1XlEngZolAjlTyJ5ZbnO5Qp0WMac_DMTx5eGJAsmkAzVWFg-qOEgnJKXN/1';
 
-
-function nickColor(nick) {
-  let hash = 0;
-  for (let i = 0; i < nick.length; i++) {
-    hash = nick.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return `hsl(${hash % 360}, 70%, 60%)`;
-}
-
-
-function render(text) {
-  const lines = text.split('\n');
-  let html = '';
-  let currentDay = '';
-
-  lines.forEach(line => {
-    const match = line.match(/^\[(\d\d:\d\d:\d\d)\]\s(.+?):$/);
-
-    if (match) {
-      const time = match[1];
-      const nick = match[2];
-      const today = new Date().toLocaleDateString();
-
-      if (currentDay !== today) {
-        currentDay = today;
-        html += `<div class="day">── ${today} ──</div>`;
+function check() {
+  fetch(API)
+    .then(r=>r.json())
+    .then(d=>{
+      if (!d.auth) {
+        document.getElementById('log').textContent =
+          'Please login via Google and reload';
+        return;
       }
-
-      html += `<span class="time">[${time}]</span> ` +
-              `<span class="nick" style="color:${nickColor(nick)}">${nick}</span>:\n`;
-    } else {
-      html += line + '\n';
-    }
-  });
-
-  logEl.innerHTML = html;
-  logEl.scrollTop = logEl.scrollHeight;
+      if (d.needNick) {
+        nickBox.style.display='block';
+      } else {
+        chatBox.style.display='block';
+        load();
+      }
+    });
 }
 
+function saveNick() {
+  fetch(API,{
+    method:'POST',
+    mode:'no-cors',
+    body:JSON.stringify({setNick:nickInput.value})
+  }).then(()=>location.reload());
+}
 
 function send() {
-  const nick = nickEl.value.trim();
-  const message = msgEl.value.trim();
-  if (!nick || !message) return;
-
-  fetch(API_URL, {
-    method: 'POST',
-    body: JSON.stringify({ nick, message })
+  fetch(API,{
+    method:'POST',
+    mode:'no-cors',
+    body:JSON.stringify({message:msg.value})
   });
-
-  msgEl.value = '';
+  msg.value='';
 }
 
-
-function loadChat() {
-  fetch(API_URL)
-    .then(r => r.text())
-    .then(render);
+function load() {
+  fetch(API)
+    .then(r=>r.text())
+    .then(t=>{
+      log.textContent=t;
+      log.scrollTop=log.scrollHeight;
+    });
 }
 
-const logEl = document.getElementById('log');
-const nickEl = document.getElementById('nick');
-const msgEl  = document.getElementById('message');
-
-setInterval(loadChat, 3000);
-loadChat();
+setInterval(load,3000);
+check();
 </script>
 
 </body>

@@ -29,67 +29,37 @@ input, textarea, button {
 </head>
 <body>
 
-<div id="log">Loading...</div>
-
-<div id="nickBox" style="display:none">
-  <input id="nickInput" placeholder="Choose your nick">
-  <button onclick="saveNick()">Save nick</button>
-</div>
-
-<div id="chatBox" style="display:none">
-  <textarea id="msg" rows="3"></textarea>
-  <button onclick="send()">Send</button>
-</div>
+<div id="log">loading...</div>
+<input id="nick" placeholder="nick">
+<textarea id="msg" rows="3"></textarea>
+<button onclick="send()">send</button>
 
 <script>
-const API = 'https://script.google.com/macros/library/d/1XlEngZolAjlTyJ5ZbnO5Qp0WMac_DMTx5eGJAsmkAzVWFg-qOEgnJKXN/1';
-
-function check() {
-  fetch(API)
-    .then(r=>r.json())
-    .then(d=>{
-      if (!d.auth) {
-        document.getElementById('log').textContent =
-          'Please login via Google and reload';
-        return;
-      }
-      if (d.needNick) {
-        nickBox.style.display='block';
-      } else {
-        chatBox.style.display='block';
-        load();
-      }
-    });
-}
-
-function saveNick() {
-  fetch(API,{
-    method:'POST',
-    mode:'no-cors',
-    body:JSON.stringify({setNick:nickInput.value})
-  }).then(()=>location.reload());
-}
-
-function send() {
-  fetch(API,{
-    method:'POST',
-    mode:'no-cors',
-    body:JSON.stringify({message:msg.value})
-  });
-  msg.value='';
-}
+const API = 'https://script.google.com/macros/s/AKfycbzQCrrnyAbszf4T2Si6SJehADQnfvIvL01n3Fm4ckBpnjF0LMJgYTo8mHUWHVJKYAGU/exec';
 
 function load() {
   fetch(API)
     .then(r=>r.text())
     .then(t=>{
-      log.textContent=t;
-      log.scrollTop=log.scrollHeight;
+      log.textContent = t;
+      log.scrollTop = log.scrollHeight;
     });
 }
 
-setInterval(load,3000);
-check();
+function send() {
+  fetch(API, {
+    method:'POST',
+    mode:'no-cors',
+    body:JSON.stringify({
+      nick:nick.value,
+      message:msg.value
+    })
+  });
+  msg.value='';
+}
+
+setInterval(load, 3000);
+load();
 </script>
 
 </body>

@@ -17,7 +17,7 @@ body {
   padding:10px;
   white-space:pre-wrap;
 }
-input, textarea, button {
+textarea, button {
   width:100%;
   background:#000;
   color:#eee;
@@ -30,12 +30,11 @@ input, textarea, button {
 <body>
 
 <div id="log">loading...</div>
-<input id="nick" placeholder="nick">
-<textarea id="msg" rows="3"></textarea>
+<textarea id="msg" rows="3" placeholder="Сообщение..."></textarea>
 <button onclick="send()">send</button>
 
 <script>
-const API = 'https://script.google.com/macros/s/AKfycbzQCrrnyAbszf4T2Si6SJehADQnfvIvL01n3Fm4ckBpnjF0LMJgYTo8mHUWHVJKYAGU/exec';
+const API = 'https://script.google.com/macros/s/XXXXXXXXXXXX/exec';
 
 function load() {
   fetch(API)
@@ -49,9 +48,8 @@ function load() {
 function send() {
   fetch(API, {
     method:'POST',
-    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      nick:nick.value,
       message:msg.value
     })
   });

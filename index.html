@@ -81,13 +81,29 @@ button:hover:not(:disabled) {
   font-size:12px;
   color:#888;
 }
+
+.nick-row {
+  display:flex;
+  gap:10px;
+}
+.nick-row input {
+  flex:1;
+}
+.nick-row button {
+  width:140px;
+}
 </style>
 </head>
 <body>
 
 <div id="terminal">
   <div id="log">loading...</div>
-  <input id="nick" placeholder="nick">
+
+  <div class="nick-row">
+    <input id="nick" placeholder="nick">
+    <button id="changeNick">change nick</button>
+  </div>
+
   <textarea id="msg" placeholder="message (max 500 chars)"></textarea>
   <button id="sendBtn">send</button>
   <div id="status"></div>
@@ -141,10 +157,32 @@ function load() {
   fetch(API).then(r => r.text()).then(render);
 }
 
+function lockNick() {
+  nick.disabled = true;
+}
+
+function unlockNick() {
+  nick.disabled = false;
+  localStorage.removeItem('chat_nick');
+}
+
+function initNick() {
+  const saved = localStorage.getItem('chat_nick');
+  if (saved) {
+    nick.value = saved;
+    lockNick();
+  }
+}
+
 function send() {
   const now = Date.now();
-  const nickVal = nick.value.trim() || 'anon';
+  const nickVal = nick.value.trim();
   const msgVal = msg.value.trim();
+
+  if (!nickVal) {
+    status.textContent = 'set nick first';
+    return;
+  }
 
   if (!msgVal) {
     status.textContent = 'empty message';
@@ -166,6 +204,9 @@ function send() {
     return;
   }
 
+  localStorage.setItem('chat_nick', nickVal);
+  lockNick();
+
   lastSendTime = now;
   lastMessage = msgVal;
   sendBtn.disabled = true;
@@ -186,6 +227,7 @@ function send() {
   }, FLOOD_DELAY);
 }
 
+changeNick.onclick = unlockNick;
 sendBtn.onclick = send;
 
 msg.addEventListener('keydown', e => {
@@ -195,6 +237,7 @@ msg.addEventListener('keydown', e => {
   }
 });
 
+initNick();
 setInterval(load, 3000);
 load();
 </script>

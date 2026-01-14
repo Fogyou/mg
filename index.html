@@ -34,6 +34,12 @@ body {
   font-weight:bold;
 }
 
+#status {
+  color:#888;
+  margin-top:5px;
+  font-size:12px;
+}
+
 input, textarea, button {
   width:100%;
   background:#000;
@@ -44,7 +50,12 @@ input, textarea, button {
   font-family:monospace;
 }
 
-button:hover {
+button:disabled {
+  color:#555;
+  border-color:#222;
+}
+
+button:hover:not(:disabled) {
   background:#111;
 }
 </style>
@@ -54,11 +65,19 @@ button:hover {
 <div id="log">loading...</div>
 
 <input id="nick" placeholder="nick">
-<textarea id="msg" rows="3" placeholder="message"></textarea>
-<button onclick="send()">send</button>
+<textarea id="msg" rows="3" placeholder="message (max 500 chars)"></textarea>
+<button id="sendBtn" onclick="send()">send</button>
+<div id="status"></div>
 
 <script>
+
 const API = 'https://script.google.com/macros/s/AKfycbykZXorAKIu6joMRIryLNejS0aDNUoHHHx8eErP1LgbUVVrW0P3AfTRFvemj63zFWJ8/exec';
+const FLOOD_DELAY = 3000;
+const MAX_LEN = 500;
+
+
+let lastSendTime = 0;
+let lastMessage = '';
 
 
 function nickColor(nick) {
@@ -69,15 +88,13 @@ function nickColor(nick) {
   return `hsl(${Math.abs(hash) % 360}, 70%, 60%)`;
 }
 
-
+/* ===== РЕНДЕР ===== */
 function render(text) {
   const lines = text.split('\n');
   let html = '';
   let currentDay = '';
 
   for (let line of lines) {
-
-
     const m = line.match(/^\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\] (.+?):$/);
 
     if (m) {
@@ -92,9 +109,7 @@ function render(text) {
 
       html += `<span class="time">[${time}]</span> `
            + `<span class="nick" style="color:${nickColor(nick)}">${nick}</span>:\n`;
-
     } else {
-     
       html += line + '\n';
     }
   }
@@ -112,20 +127,54 @@ function load() {
 
 
 function send() {
-  if (!msg.value.trim()) return;
+  const now = Date.now();
+  const nickVal = nick.value.trim() || 'anon';
+  const msgVal = msg.value.trim();
+
+  if (!msgVal) {
+    status.textContent = 'empty message';
+    return;
+  }
+
+  if (msgVal.length > MAX_LEN) {
+    status.textContent = `message too long (${msgVal.length}/${MAX_LEN})`;
+    return;
+  }
+
+  if (msgVal === lastMessage) {
+    status.textContent = 'duplicate message blocked';
+    return;
+  }
+
+  if (now - lastSendTime < FLOOD_DELAY) {
+    status.textContent = 'slow down';
+    return;
+  }
+
+  lastSendTime = now;
+  lastMessage = msgVal;
+
+  sendBtn.disabled = true;
+  status.textContent = 'sending...';
 
   fetch(API, {
     method: 'POST',
     mode: 'no-cors',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      nick: nick.value || 'anon',
-      message: msg.value
+      nick: nickVal,
+      message: msgVal
     })
   });
 
   msg.value = '';
+
+  setTimeout(() => {
+    sendBtn.disabled = false;
+    status.textContent = '';
+  }, FLOOD_DELAY);
 }
+
 
 setInterval(load, 3000);
 load();

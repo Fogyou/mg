@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>Night Chat</title>
-
 <style>
 body {
   background:#000;
@@ -11,7 +10,6 @@ body {
   font-family:monospace;
   padding:20px;
 }
-
 #terminal {
   max-width:900px;
   margin:0 auto;
@@ -19,7 +17,6 @@ body {
   flex-direction:column;
   gap:10px;
 }
-
 #log {
   border:1px solid #333;
   padding:10px;
@@ -27,26 +24,21 @@ body {
   overflow:auto;
   white-space:pre-wrap;
 }
-
 .day {
   text-align:center;
   color:#6cf;
   margin:10px 0;
 }
-
 .time {
   color:#888;
 }
-
 .nick {
   font-weight:bold;
 }
-
 .system {
   color:#f6a;
   font-style:italic;
 }
-
 input, textarea, button {
   width:100%;
   box-sizing:border-box;
@@ -57,52 +49,21 @@ input, textarea, button {
   font-family:monospace;
   font-size:14px;
 }
-
-input {
-  height:36px;
-}
-
-textarea {
-  height:80px;
-  resize:none;
-}
-
-button {
-  height:36px;
-  cursor:pointer;
-}
-
-button:disabled {
-  color:#555;
-  border-color:#222;
-}
-
-button:hover:not(:disabled) {
-  background:#111;
-}
-
-#status {
-  height:16px;
-  font-size:12px;
-  color:#888;
-}
-
-.nick-row {
-  display:flex;
-  gap:10px;
-}
-
-.nick-row input {
-  flex:1;
-}
-
-.nick-row button {
-  width:140px;
-}
+input { height:36px; }
+textarea { height:80px; resize:none; }
+button { height:36px; cursor:pointer; }
+button:disabled { color:#555; border-color:#222; }
+button:hover:not(:disabled) { background:#111; }
+#status { height:16px; font-size:12px; color:#888; }
+.nick-row { display:flex; gap:10px; }
+.nick-row input { flex:1; }
+.nick-row button { width:140px; }
+#emojiPanel { display:flex; flex-wrap:wrap; gap:5px; padding:5px 0; border-top:1px solid #333; }
+.emojiBtn { cursor:pointer; padding:4px 6px; border:1px solid #333; border-radius:4px; font-size:16px; user-select:none; }
+.emojiBtn:hover { background:#111; }
 </style>
 </head>
 <body>
-
 <div id="terminal">
   <div id="log">loading...</div>
 
@@ -112,6 +73,9 @@ button:hover:not(:disabled) {
   </div>
 
   <textarea id="msg" placeholder="message (max 500 chars)"></textarea>
+
+  <div id="emojiPanel"></div>
+
   <button id="sendBtn">send</button>
   <div id="status"></div>
 </div>
@@ -123,150 +87,105 @@ const MAX_LEN = 500;
 
 let lastSendTime = 0;
 let lastMessage = '';
-let pendingNickChange = null;
+let oldNick = null;
+let nickEditing = false;
 
-function nickColor(nick) {
-  let hash = 0;
-  for (let i = 0; i < nick.length; i++) {
-    hash = nick.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return `hsl(${Math.abs(hash) % 360}, 70%, 60%)`;
+const EMOJI = {
+  ':)': '🙂', ':(': '🙁', ':D': '😄', ';)': '😉',
+  ':smile:': '😄', ':laugh:': '😂', ':heart:': '❤️', ':fire:': '🔥',
+  ':ok:': '👌', ':cry:': '😢', ':angry:': '😠'
+};
+
+function parseEmoji(text){
+  for(const k in EMOJI){ text=text.split(k).join(EMOJI[k]); }
+  return text;
 }
 
-function render(text) {
-  const lines = text.split('\n');
-  let html = '';
-  let currentDay = '';
-
-  for (let line of lines) {
-    const m = line.match(/^\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\] (.+?):$/);
-
-    if (m) {
-      const date = m[1];
-      const time = m[2];
-      const nick = m[3];
-
-      if (currentDay !== date) {
-        currentDay = date;
-        html += `<div class="day">── ${date} ──</div>`;
-      }
-
-      if (nick === 'system') {
-        html += `<span class="time">[${time}]</span> <span class="system">system</span>:\n`;
-      } else {
-        html += `<span class="time">[${time}]</span> <span class="nick" style="color:${nickColor(nick)}">${nick}</span>:\n`;
-      }
-    } else {
-      html += line + '\n';
-    }
-  }
-
-  log.innerHTML = html;
-  log.scrollTop = log.scrollHeight;
+function nickColor(nick){
+  let hash=0;
+  for(let i=0;i<nick.length;i++){ hash=nick.charCodeAt(i)+((hash<<5)-hash); }
+  return `hsl(${Math.abs(hash)%360},70%,60%)`;
 }
 
-function load() {
-  fetch(API).then(r => r.text()).then(render);
+function render(text){
+  const lines=text.split('\n');
+  let html='';
+  let currentDay='';
+  for(const line of lines){
+    const m=line.match(/^\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\] (.+?):$/);
+    if(m){
+      const date=m[1], time=m[2], nick=m[3];
+      if(currentDay!==date){ currentDay=date; html+=`<div class="day">── ${date} ──</div>`; }
+      if(nick==='system'){ html+=`<span class="time">[${time}]</span> <span class="system">system</span>:\n`; }
+      else{ html+=`<span class="time">[${time}]</span> <span class="nick" style="color:${nickColor(nick)}">${nick}</span>:\n`; }
+    }else{ html+=parseEmoji(line)+'\n'; }
+  }
+  log.innerHTML=html;
+  log.scrollTop=log.scrollHeight;
 }
 
-function initNick() {
-  const saved = localStorage.getItem('chat_nick');
-  if (saved) {
-    nick.value = saved;
-    nick.disabled = true;
-  }
+function load(){ fetch(API).then(r=>r.text()).then(render); }
+
+function sendSystem(text){
+  fetch(API,{ method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({ nick:'system', message:text }) });
 }
 
-function unlockNick() {
-  const oldNick = localStorage.getItem('chat_nick');
-  if (oldNick) pendingNickChange = oldNick;
-  nick.disabled = false;
-  localStorage.removeItem('chat_nick');
+function initNick(){
+  const saved=localStorage.getItem('chat_nick');
+  if(saved){ nick.value=saved; nick.disabled=true; }
 }
 
-function sendSystem(text) {
-  fetch(API, {
-    method:'POST',
-    mode:'no-cors',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ nick:'system', message:text })
-  });
+changeNick.onclick=()=>{
+  if(!nickEditing){
+    oldNick=localStorage.getItem('chat_nick');
+    nick.disabled=false; nick.focus();
+    changeNick.textContent='confirm nick'; nickEditing=true;
+  }else{
+    const newNick=nick.value.trim();
+    if(!newNick) return;
+    if(oldNick && oldNick!==newNick) sendSystem(`${oldNick} is now known as ${newNick}`);
+    localStorage.setItem('chat_nick',newNick);
+    nick.disabled=true; changeNick.textContent='change nick'; nickEditing=false; oldNick=null;
+  }
+};
+
+function send(){
+  const now=Date.now();
+  const nickVal=nick.value.trim();
+  const msgVal=msg.value.trim();
+  if(!nickVal||!msgVal) return;
+  if(msgVal.length>MAX_LEN) return;
+  if(msgVal===lastMessage) return;
+  if(now-lastSendTime<FLOOD_DELAY) return;
+  lastSendTime=now; lastMessage=msgVal; sendBtn.disabled=true;
+  fetch(API,{ method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({ nick:nickVal,message:msgVal }) });
+  msg.value=''; setTimeout(()=>sendBtn.disabled=false,FLOOD_DELAY);
 }
 
-function send() {
-  const now = Date.now();
-  const nickVal = nick.value.trim();
-  const msgVal = msg.value.trim();
-
-  if (!nickVal) {
-    status.textContent = 'set nick first';
-    return;
-  }
-
-  if (!msgVal) {
-    status.textContent = 'empty message';
-    return;
-  }
-
-  if (msgVal.length > MAX_LEN) {
-    status.textContent = 'message too long';
-    return;
-  }
-
-  if (msgVal === lastMessage) {
-    status.textContent = 'duplicate blocked';
-    return;
-  }
-
-  if (now - lastSendTime < FLOOD_DELAY) {
-    status.textContent = 'slow down';
-    return;
-  }
-
-  if (pendingNickChange && pendingNickChange !== nickVal) {
-    sendSystem(`${pendingNickChange} поменял ник на ${nickVal}`);
-    pendingNickChange = null;
-  }
-
-  localStorage.setItem('chat_nick', nickVal);
-  nick.disabled = true;
-
-  lastSendTime = now;
-  lastMessage = msgVal;
-  sendBtn.disabled = true;
-  status.textContent = 'sending...';
-
-  fetch(API, {
-    method:'POST',
-    mode:'no-cors',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ nick:nickVal, message:msgVal })
-  });
-
-  msg.value = '';
-
-  setTimeout(() => {
-    sendBtn.disabled = false;
-    status.textContent = '';
-  }, FLOOD_DELAY);
-}
-
-changeNick.onclick = unlockNick;
-sendBtn.onclick = send;
-
-msg.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    send();
-  }
-});
+sendBtn.onclick=send;
+msg.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); } });
 
 initNick();
-setInterval(load, 3000);
+setInterval(load,3000);
 load();
-</script>
 
+const emojiPanel=document.getElementById('emojiPanel');
+Object.values(EMOJI).forEach(e=>{
+  const btn=document.createElement('div');
+  btn.className='emojiBtn';
+  btn.textContent=e;
+  btn.onclick=()=>insertAtCursor(msg,e);
+  emojiPanel.appendChild(btn);
+});
+
+function insertAtCursor(textarea,text){
+  const start=textarea.selectionStart;
+  const end=textarea.selectionEnd;
+  const val=textarea.value;
+  textarea.value=val.substring(0,start)+text+val.substring(end);
+  textarea.selectionStart=textarea.selectionEnd=start+text.length;
+  textarea.focus();
+}
+</script>
 </body>
 </html>
-
-

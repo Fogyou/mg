@@ -132,7 +132,8 @@ function sendSystem(text){
 
 function initNick(){
   const saved=localStorage.getItem('chat_nick');
-  if(saved){ nick.value=saved; nick.disabled=true; }
+  if(saved){ nick.value=saved; nick.disabled=true; sendBtn.disabled=false; }
+  else sendBtn.disabled=true; // блокируем до подтверждения ника
 }
 
 changeNick.onclick=()=>{
@@ -140,16 +141,19 @@ changeNick.onclick=()=>{
     oldNick=localStorage.getItem('chat_nick');
     nick.disabled=false; nick.focus();
     changeNick.textContent='confirm nick'; nickEditing=true;
+    sendBtn.disabled=true; // блокируем отправку
   }else{
     const newNick=nick.value.trim();
     if(!newNick) return;
     if(oldNick && oldNick!==newNick) sendSystem(`${oldNick} is now known as ${newNick}`);
     localStorage.setItem('chat_nick',newNick);
     nick.disabled=true; changeNick.textContent='change nick'; nickEditing=false; oldNick=null;
+    sendBtn.disabled=false; // разблокируем отправку после подтверждения
   }
 };
 
 function send(){
+  if(sendBtn.disabled) return; // защита, если ник не подтверждён
   const now=Date.now();
   const nickVal=nick.value.trim();
   const msgVal=msg.value.trim();

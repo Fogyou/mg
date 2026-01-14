@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Console Chat</title>
+<title>Night Chat</title>
 
 <style>
 body {
@@ -10,6 +10,14 @@ body {
   color:#eee;
   font-family:monospace;
   padding:20px;
+}
+
+#terminal {
+  max-width:900px;
+  margin:0 auto;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
 
 #log {
@@ -34,20 +42,29 @@ body {
   font-weight:bold;
 }
 
-#status {
-  color:#888;
-  margin-top:5px;
-  font-size:12px;
-}
-
 input, textarea, button {
   width:100%;
+  box-sizing:border-box;
   background:#000;
   color:#eee;
   border:1px solid #333;
-  margin-top:10px;
-  padding:6px;
+  padding:8px;
   font-family:monospace;
+  font-size:14px;
+}
+
+input {
+  height:36px;
+}
+
+textarea {
+  height:80px;
+  resize:none;
+}
+
+button {
+  height:36px;
+  cursor:pointer;
 }
 
 button:disabled {
@@ -58,27 +75,31 @@ button:disabled {
 button:hover:not(:disabled) {
   background:#111;
 }
+
+#status {
+  height:16px;
+  font-size:12px;
+  color:#888;
+}
 </style>
 </head>
 <body>
 
-<div id="log">loading...</div>
-
-<input id="nick" placeholder="nick">
-<textarea id="msg" rows="3" placeholder="message (max 500 chars)"></textarea>
-<button id="sendBtn" onclick="send()">send</button>
-<div id="status"></div>
+<div id="terminal">
+  <div id="log">loading...</div>
+  <input id="nick" placeholder="nick">
+  <textarea id="msg" placeholder="message (max 500 chars)"></textarea>
+  <button id="sendBtn">send</button>
+  <div id="status"></div>
+</div>
 
 <script>
-
 const API = 'https://script.google.com/macros/s/AKfycbykZXorAKIu6joMRIryLNejS0aDNUoHHHx8eErP1LgbUVVrW0P3AfTRFvemj63zFWJ8/exec';
 const FLOOD_DELAY = 3000;
 const MAX_LEN = 500;
 
-
 let lastSendTime = 0;
 let lastMessage = '';
-
 
 function nickColor(nick) {
   let hash = 0;
@@ -88,7 +109,6 @@ function nickColor(nick) {
   return `hsl(${Math.abs(hash) % 360}, 70%, 60%)`;
 }
 
-/* ===== РЕНДЕР ===== */
 function render(text) {
   const lines = text.split('\n');
   let html = '';
@@ -107,8 +127,7 @@ function render(text) {
         html += `<div class="day">── ${date} ──</div>`;
       }
 
-      html += `<span class="time">[${time}]</span> `
-           + `<span class="nick" style="color:${nickColor(nick)}">${nick}</span>:\n`;
+      html += `<span class="time">[${time}]</span> <span class="nick" style="color:${nickColor(nick)}">${nick}</span>:\n`;
     } else {
       html += line + '\n';
     }
@@ -118,13 +137,9 @@ function render(text) {
   log.scrollTop = log.scrollHeight;
 }
 
-
 function load() {
-  fetch(API)
-    .then(r => r.text())
-    .then(render);
+  fetch(API).then(r => r.text()).then(render);
 }
-
 
 function send() {
   const now = Date.now();
@@ -137,12 +152,12 @@ function send() {
   }
 
   if (msgVal.length > MAX_LEN) {
-    status.textContent = `message too long (${msgVal.length}/${MAX_LEN})`;
+    status.textContent = 'message too long';
     return;
   }
 
   if (msgVal === lastMessage) {
-    status.textContent = 'duplicate message blocked';
+    status.textContent = 'duplicate blocked';
     return;
   }
 
@@ -153,18 +168,14 @@ function send() {
 
   lastSendTime = now;
   lastMessage = msgVal;
-
   sendBtn.disabled = true;
   status.textContent = 'sending...';
 
   fetch(API, {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      nick: nickVal,
-      message: msgVal
-    })
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ nick:nickVal, message:msgVal })
   });
 
   msg.value = '';
@@ -175,6 +186,14 @@ function send() {
   }, FLOOD_DELAY);
 }
 
+sendBtn.onclick = send;
+
+msg.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+});
 
 setInterval(load, 3000);
 load();

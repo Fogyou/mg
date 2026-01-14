@@ -224,7 +224,7 @@ function send() {
   }
 
   if (pendingNickChange && pendingNickChange !== nickVal) {
-    sendSystem(`${pendingNickChange} is now known as ${nickVal}`);
+    sendSystem(`${pendingNickChange} поменял ник на ${nickVal}`);
     pendingNickChange = null;
   }
 
@@ -268,4 +268,5 @@ load();
 
 </body>
 </html>
+
 

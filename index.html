@@ -2,7 +2,8 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Night Chat</title>
+<title>Console Chat</title>
+
 <style>
 body {
   background:#000;
@@ -10,6 +11,7 @@ body {
   font-family:monospace;
   padding:20px;
 }
+
 #log {
   border:1px solid #333;
   padding:10px;
@@ -17,6 +19,21 @@ body {
   overflow:auto;
   white-space:pre-wrap;
 }
+
+.day {
+  text-align:center;
+  color:#6cf;
+  margin:10px 0;
+}
+
+.time {
+  color:#888;
+}
+
+.nick {
+  font-weight:bold;
+}
+
 input, textarea, button {
   width:100%;
   background:#000;
@@ -26,6 +43,7 @@ input, textarea, button {
   padding:6px;
   font-family:monospace;
 }
+
 button:hover {
   background:#111;
 }
@@ -42,14 +60,56 @@ button:hover {
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbykZXorAKIu6joMRIryLNejS0aDNUoHHHx8eErP1LgbUVVrW0P3AfTRFvemj63zFWJ8/exec';
 
+
+function nickColor(nick) {
+  let hash = 0;
+  for (let i = 0; i < nick.length; i++) {
+    hash = nick.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return `hsl(${Math.abs(hash) % 360}, 70%, 60%)`;
+}
+
+
+function render(text) {
+  const lines = text.split('\n');
+  let html = '';
+  let currentDay = '';
+
+  for (let line of lines) {
+
+
+    const m = line.match(/^\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})\] (.+?):$/);
+
+    if (m) {
+      const date = m[1];
+      const time = m[2];
+      const nick = m[3];
+
+      if (currentDay !== date) {
+        currentDay = date;
+        html += `<div class="day">── ${date} ──</div>`;
+      }
+
+      html += `<span class="time">[${time}]</span> `
+           + `<span class="nick" style="color:${nickColor(nick)}">${nick}</span>:\n`;
+
+    } else {
+     
+      html += line + '\n';
+    }
+  }
+
+  log.innerHTML = html;
+  log.scrollTop = log.scrollHeight;
+}
+
+
 function load() {
   fetch(API)
     .then(r => r.text())
-    .then(t => {
-      log.textContent = t;
-      log.scrollTop = log.scrollHeight;
-    });
+    .then(render);
 }
+
 
 function send() {
   if (!msg.value.trim()) return;

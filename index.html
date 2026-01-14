@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Console Chat</title>
+<title>Night Chat</title>
 <style>
 body {
   background:#000;
@@ -12,48 +12,59 @@ body {
 }
 #log {
   border:1px solid #333;
+  padding:10px;
   height:60vh;
   overflow:auto;
-  padding:10px;
   white-space:pre-wrap;
 }
-textarea, button {
+input, textarea, button {
   width:100%;
   background:#000;
   color:#eee;
   border:1px solid #333;
   margin-top:10px;
   padding:6px;
+  font-family:monospace;
+}
+button:hover {
+  background:#111;
 }
 </style>
 </head>
 <body>
 
 <div id="log">loading...</div>
-<textarea id="msg" rows="3" placeholder="Сообщение..."></textarea>
+
+<input id="nick" placeholder="nick">
+<textarea id="msg" rows="3" placeholder="message"></textarea>
 <button onclick="send()">send</button>
 
 <script>
-const API = 'https://script.google.com/macros/s/XXXXXXXXXXXX/exec';
+const API = 'https://script.google.com/macros/s/AKfycbykZXorAKIu6joMRIryLNejS0aDNUoHHHx8eErP1LgbUVVrW0P3AfTRFvemj63zFWJ8/exec';
 
 function load() {
   fetch(API)
-    .then(r=>r.text())
-    .then(t=>{
+    .then(r => r.text())
+    .then(t => {
       log.textContent = t;
       log.scrollTop = log.scrollHeight;
     });
 }
 
 function send() {
+  if (!msg.value.trim()) return;
+
   fetch(API, {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      message:msg.value
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      nick: nick.value || 'anon',
+      message: msg.value
     })
   });
-  msg.value='';
+
+  msg.value = '';
 }
 
 setInterval(load, 3000);

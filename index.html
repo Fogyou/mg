@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Night Chat</title>
+<title>Console Chat</title>
 
 <style>
 body {
@@ -40,6 +40,11 @@ body {
 
 .nick {
   font-weight:bold;
+}
+
+.system {
+  color:#f6a;
+  font-style:italic;
 }
 
 input, textarea, button {
@@ -86,9 +91,11 @@ button:hover:not(:disabled) {
   display:flex;
   gap:10px;
 }
+
 .nick-row input {
   flex:1;
 }
+
 .nick-row button {
   width:140px;
 }
@@ -116,6 +123,7 @@ const MAX_LEN = 500;
 
 let lastSendTime = 0;
 let lastMessage = '';
+let pendingNickChange = null;
 
 function nickColor(nick) {
   let hash = 0;
@@ -143,7 +151,11 @@ function render(text) {
         html += `<div class="day">── ${date} ──</div>`;
       }
 
-      html += `<span class="time">[${time}]</span> <span class="nick" style="color:${nickColor(nick)}">${nick}</span>:\n`;
+      if (nick === 'system') {
+        html += `<span class="time">[${time}]</span> <span class="system">system</span>:\n`;
+      } else {
+        html += `<span class="time">[${time}]</span> <span class="nick" style="color:${nickColor(nick)}">${nick}</span>:\n`;
+      }
     } else {
       html += line + '\n';
     }
@@ -157,21 +169,28 @@ function load() {
   fetch(API).then(r => r.text()).then(render);
 }
 
-function lockNick() {
-  nick.disabled = true;
-}
-
-function unlockNick() {
-  nick.disabled = false;
-  localStorage.removeItem('chat_nick');
-}
-
 function initNick() {
   const saved = localStorage.getItem('chat_nick');
   if (saved) {
     nick.value = saved;
-    lockNick();
+    nick.disabled = true;
   }
+}
+
+function unlockNick() {
+  const oldNick = localStorage.getItem('chat_nick');
+  if (oldNick) pendingNickChange = oldNick;
+  nick.disabled = false;
+  localStorage.removeItem('chat_nick');
+}
+
+function sendSystem(text) {
+  fetch(API, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ nick:'system', message:text })
+  });
 }
 
 function send() {
@@ -204,8 +223,13 @@ function send() {
     return;
   }
 
+  if (pendingNickChange && pendingNickChange !== nickVal) {
+    sendSystem(`${pendingNickChange} is now known as ${nickVal}`);
+    pendingNickChange = null;
+  }
+
   localStorage.setItem('chat_nick', nickVal);
-  lockNick();
+  nick.disabled = true;
 
   lastSendTime = now;
   lastMessage = msgVal;

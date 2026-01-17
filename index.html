@@ -134,7 +134,7 @@ function sendSystem(text){
 function initNick(){
   const saved=localStorage.getItem('chat_nick');
   if(saved){ nick.value=saved; nick.disabled=true; sendBtn.disabled=false; }
-  else sendBtn.disabled=true; // блокируем до подтверждения ника
+  else sendBtn.disabled=true; 
 }
 
 changeNick.onclick=()=>{
@@ -142,19 +142,19 @@ changeNick.onclick=()=>{
     oldNick=localStorage.getItem('chat_nick');
     nick.disabled=false; nick.focus();
     changeNick.textContent='confirm nick'; nickEditing=true;
-    sendBtn.disabled=true; // блокируем отправку
+    sendBtn.disabled=true; 
   }else{
     const newNick=nick.value.trim();
     if(!newNick) return;
     if(oldNick && oldNick!==newNick) sendSystem(`${oldNick} is now known as ${newNick}`);
     localStorage.setItem('chat_nick',newNick);
     nick.disabled=true; changeNick.textContent='change nick'; nickEditing=false; oldNick=null;
-    sendBtn.disabled=false; // разблокируем отправку после подтверждения
+    sendBtn.disabled=false; 
   }
 };
 
 function send(){
-  if(sendBtn.disabled) return; // защита, если ник не подтверждён
+  if(sendBtn.disabled) return; 
   const now=Date.now();
   const nickVal=nick.value.trim();
   const msgVal=msg.value.trim();
@@ -194,5 +194,6 @@ function insertAtCursor(textarea,text){
 </script>
 </body>
 </html>
+
 
 
